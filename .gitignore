@@ -16,3 +16,6 @@ bin/
 # IDE stuff
 .vscode/
 .idea/
+
+# Git cheat sheet
+git_cheatsheet.md
