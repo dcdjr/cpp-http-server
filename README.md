@@ -35,11 +35,3 @@ g++ -std=c++17 -pthread *.cpp -o server
 ```
 
 Open: http://localhost:8080
-
-## Layout
-main.cpp
-socket_utils.*      # socket setup, read/write, errors, logging
-http_parser.*       # request parsing
-http_request.hpp    # request struct
-router.*            # routing + MIME type detection
-static/             # served files
