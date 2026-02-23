@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <ctime>
 #include <thread>
 
@@ -24,7 +25,9 @@ int main() {
         int client_fd = accept(server_fd, (sockaddr*)&client_addr, &client_len);
         if (client_fd < 0) continue;
 
-        std::thread t(handle_client, client_fd);
+        std::string client_ip = inet_ntoa(client_addr.sin_addr);
+
+        std::thread t(handle_client, client_fd, client_ip);
         t.detach();
     }
 

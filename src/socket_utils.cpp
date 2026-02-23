@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <ctime>
 
 #include "http_parser.hpp"
 #include "http_request.hpp"
@@ -19,10 +20,14 @@ FDOPOutcomes read_http_request(int fd, char* req) {
         ssize_t n = read(fd, req + total, MAX_REQ - total);
 
         if (n == 0) return ERR_CLOSED;
-        if (n < 0) return ERR_408;
+        if (n < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCKAGAIN)
+                return ERR_408;
+            return ERR_CLOSED;
+        }
 
         total += n;
-        req[total] = '\0'; // null termination for strstr()
+        if (total < MAX_REQ) req[total] = '\0'; // null termination for strstr()
 
         char* end = strstr(req, "\r\n\r\n");
         if (end) {
@@ -49,7 +54,11 @@ FDOPOutcomes read_http_request(int fd, char* req) {
                 ssize_t m = read(fd, req + total, MAX_REQ - total);
 
                 if (m == 0) return ERR_CLOSED;
-                if (m < 0) return ERR_408;
+                if (m < 0) {
+                    if (errno == EAGAIN || errno == EWOULDBLOCKAGAIN)
+                        return ERR_408;
+                    return ERR_CLOSED;
+                }
 
                 total += m;
                 body_read += m;
@@ -116,7 +125,7 @@ void send_error(int client_fd, const char* status) {
     }
 }
 
-void handle_client(int client_fd) {
+void handle_client(int client_fd, const std::string& client_ip) {
     struct timeval timeout;
     timeout.tv_sec = 5;
     timeout.tv_usec = 0;
@@ -167,12 +176,24 @@ void handle_client(int client_fd) {
 
     std::string response = route_request(request);
 
+    // Extract status and size
+    std::string status = response.substr(9, 3);
+    size_t size = response.size();
+
     // Writes crafted response to file descriptor representing client connection
     // Ensures full response is written
     FDOPOutcomes write_outcome = write_response(client_fd, response);
     if (write_outcome != SUCCESS) {
         std::cerr << "There was an error sending client response.";
     }
+
+    // Log
+    std::cout << "[" << get_timestamp() << "] "
+              << client_ip << " "
+              << request.method << " "
+              << request.path << " -> "
+              << status << " (" << size << " bytes)"
+              << std::endl;
 
     // Closes client connection
     close(client_fd);
@@ -194,4 +215,11 @@ FDOPOutcomes write_response(int client_fd, const std::string& response) {
         bytes_written += result;
     }
     return SUCCESS;
+}
+
+std::string get_timestamp() {
+    std::time_t now = std::time(nullptr);
+    char buf[64];
+    std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
+    return std::string(buf);
 }
