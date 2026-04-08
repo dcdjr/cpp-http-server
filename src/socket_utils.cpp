@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <cstdlib>
 #include <cstring>
 #include <errno.h>
 #include <unistd.h>
@@ -21,7 +22,7 @@ FDOPOutcomes read_http_request(int fd, char* req) {
 
         if (n == 0) return ERR_CLOSED;
         if (n < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCKAGAIN)
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
                 return ERR_408;
             return ERR_CLOSED;
         }
@@ -38,24 +39,36 @@ FDOPOutcomes read_http_request(int fd, char* req) {
 
             HTTPRequest request;
             if (!parse_request(raw_headers, request)) {
-                return ERR_CLOSED;
+                return ERR_400;
             }
 
             // get content-length
-            int content_length = 0;
+            size_t content_length = 0;
             if (request.headers.count("content-length")) {
-                content_length = std::stoi(request.headers["content-length"]);
+                const std::string& header_value = request.headers["content-length"];
+                char* end_ptr = nullptr;
+
+                errno = 0;
+                long parsed_length = std::strtol(header_value.c_str(), &end_ptr, 10);
+                if (errno != 0 || end_ptr == header_value.c_str() || *end_ptr != '\0' || parsed_length < 0) {
+                    return ERR_400;
+                }
+
+                content_length = static_cast<size_t>(parsed_length);
+                if (content_length > MAX_REQ - header_len) {
+                    return ERR_413;
+                }
             }
 
             // read body
             size_t body_read = total - header_len;
 
-            while (body_read < (size_t)content_length) {
+            while (body_read < content_length) {
                 ssize_t m = read(fd, req + total, MAX_REQ - total);
 
                 if (m == 0) return ERR_CLOSED;
                 if (m < 0) {
-                    if (errno == EAGAIN || errno == EWOULDBLOCKAGAIN)
+                    if (errno == EAGAIN || errno == EWOULDBLOCK)
                         return ERR_408;
                     return ERR_CLOSED;
                 }
@@ -84,7 +97,7 @@ int set_up_server_socket(int port) {
     setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
     // Initializes a structure to contain server socket address info
-    struct sockaddr_in s;
+    struct sockaddr_in s {};
 
     // Assigns necessary values to each field in socket address struct
     s.sin_family = AF_INET;
@@ -95,6 +108,7 @@ int set_up_server_socket(int port) {
     int bind_result = bind(server_fd, (struct sockaddr*)&s, sizeof(s));
     if (bind_result < 0) {
         std::cerr << "There was an error binding the socket.\n";
+        close(server_fd);
         return -1;
     }
 
@@ -103,6 +117,7 @@ int set_up_server_socket(int port) {
     int listen_result = listen(server_fd, backlog);
     if (listen_result < 0) {
         std::cerr << "There was an error attempting to listen on the socket.\n";
+        close(server_fd);
         return -1;
     }
 
@@ -119,9 +134,9 @@ void send_error(int client_fd, const char* status) {
         "\r\n" +
         status;
 
-    int bytes_written = write_response(client_fd, response);
-    if (bytes_written != SUCCESS) {
-        std::cerr << "There was an error sending client response.";
+    FDOPOutcomes write_outcome = write_response(client_fd, response);
+    if (write_outcome != SUCCESS) {
+        std::cerr << "There was an error sending client response.\n";
     }
 }
 
@@ -139,6 +154,10 @@ void handle_client(int client_fd, const std::string& client_ip) {
     FDOPOutcomes request_read_outcome = read_http_request(client_fd, req);
 
     switch (request_read_outcome) {
+    case ERR_400:
+        send_error(client_fd, "400 Bad Request");
+        close(client_fd);
+        return;
     case ERR_408:
         send_error(client_fd, "408 Request Timeout");
         close(client_fd);
@@ -184,7 +203,7 @@ void handle_client(int client_fd, const std::string& client_ip) {
     // Ensures full response is written
     FDOPOutcomes write_outcome = write_response(client_fd, response);
     if (write_outcome != SUCCESS) {
-        std::cerr << "There was an error sending client response.";
+        std::cerr << "There was an error sending client response.\n";
     }
 
     // Log
@@ -210,6 +229,7 @@ FDOPOutcomes write_response(int client_fd, const std::string& response) {
             if (errno == EWOULDBLOCK || errno == EAGAIN) {
                 return ERR_408;
             }
+            return ERR_CLOSED;
         }
 
         bytes_written += result;

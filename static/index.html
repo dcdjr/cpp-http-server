@@ -2,20 +2,28 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>My C++ HTTP Server</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C++ HTTP Server</title>
+    <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-    <h1>Hello there.</h1>
+    <main class="page">
+        <p class="eyebrow">cpp-http-server</p>
+        <h1>Minimal HTTP server in C++</h1>
+        <p class="lead">
+            This server listens on port 8080 and serves files from the
+            <code>static/</code> directory.
+        </p>
 
-    <p>This page is being served by a custom C++ HTTP server.</p>
-
-    <ul>
-        <li><a href="/">/</a></li>
-        <li><a href="/hello">/hello</a></li>
-        <li><a href="/time">/time</a></li>
-    </ul>
-
-    <p>Status: OK</p>
+        <section class="card">
+            <h2>Try these routes</h2>
+            <ul>
+                <li><a href="/">/</a></li>
+                <li><a href="/index.html">/index.html</a></li>
+                <li><a href="/style.css">/style.css</a></li>
+                <li><a href="/missing">/missing</a> (expected 404)</li>
+            </ul>
+        </section>
+    </main>
 </body>
 </html>
-

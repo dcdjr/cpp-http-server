@@ -31,8 +31,6 @@ run: all
 
 # Clean build artifacts
 clean:
-	rm -f $(SRC_DIR)/*.o
-	rm 	-f $(TARGET)
+	rm -f $(SRC_DIR)/*.o $(TARGET)
 
 .PHONY: all run clean
-

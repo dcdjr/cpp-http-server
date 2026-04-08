@@ -2,19 +2,20 @@
 #define SOCKET_UTILS_HPP
 
 
+#include <cstddef>
 #include <string>
 
 
 constexpr size_t MAX_REQ = 8192;
 
 
-typedef enum {
+enum FDOPOutcomes {
+    ERR_400,
     ERR_413,
     ERR_408,
     ERR_CLOSED,
     SUCCESS
-}
-FDOPOutcomes;
+};
 
 
 FDOPOutcomes read_http_request(int fd, char* req);

@@ -75,7 +75,10 @@ std::string route_request(const HTTPRequest& req) {
         }
     }
 
-    std::string content_type = get_mime_type(path);
+    std::string content_type = "text/plain";
+    if (method == "GET" && status == "200 OK") {
+        content_type = get_mime_type(path);
+    }
 
     std::string response =
         "HTTP/1.1 " + status + "\r\n"
