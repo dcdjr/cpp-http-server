@@ -28,55 +28,6 @@ A lightweight HTTP/1.1 server written in C++ using POSIX sockets. Supports basic
    - Other methods return placeholder responses
 6. Write full response and log the request
 
-## Build & Run
-```bash
-g++ -std=c++17 -pthread *.cpp -o server
-./server
-```
-
-Open: http://localhost:8080
-=======
-# cpp-http-server
-
-A small multithreaded HTTP server written in C++17. It listens on port `8080`, parses basic HTTP/1.1 requests, and serves files from the [`static/`](./static) directory.
-
-## What it does
-
-- Accepts TCP connections and handles each client on a detached thread.
-- Parses the request line, headers, and optional body.
-- Serves static files for `GET` requests from `static/`.
-- Returns basic HTTP errors such as `400`, `404`, `408`, `413`, and `505`.
-- Returns placeholder `200 OK` responses for `POST`, `PUT`, and `DELETE`.
-
-## Requirements
-
-- Linux or WSL
-- `g++`
-- `make`
-
-## Build and run
-
-```bash
-make
-./bin/server
-```
-
-Or use:
-
-```bash
-make run
-```
-
-Then open [http://127.0.0.1:8080](http://127.0.0.1:8080).
-
-## Quick checks
-
-```bash
-curl -i http://127.0.0.1:8080/
-curl -i http://127.0.0.1:8080/style.css
-curl -i http://127.0.0.1:8080/missing
-```
-
 ## Project layout
 
 ```text
@@ -84,6 +35,28 @@ include/   headers
 src/       server, parser, router, and socket code
 static/    files served by the HTTP server
 bin/       compiled binary output
+```
+
+## Requirements
+
+- Linux or WSL
+- `g++`
+- `make`
+
+## Build & Run
+```bash
+g++ -std=c++17 -pthread *.cpp -o server
+./server
+```
+
+Open: http://localhost:8080
+
+## Quick checks
+
+```bash
+curl -i http://127.0.0.1:8080/
+curl -i http://127.0.0.1:8080/style.css
+curl -i http://127.0.0.1:8080/missing
 ```
 
 ## Notes
